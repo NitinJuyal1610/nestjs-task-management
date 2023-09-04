@@ -1,20 +1,27 @@
 import { Injectable } from '@nestjs/common';
-import { Task, TaskStatus } from './task.model';
+import { TaskModel, TaskStatus } from './task.model';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { GetTasksFilterDto } from './dto/get-tasks-filter-dto';
 import { NotFoundException } from '@nestjs/common/exceptions';
 import { UpdateTaskStatusDto } from './dto/update-task-status.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Task } from './task.entity';
 
 @Injectable()
 export class TasksService {
-  private tasks: Task[] = [];
+  constructor(
+    @InjectRepository(Task) private tasksRepository: Repository<Task>,
+  ) {}
 
-  getAllTasks(): Task[] {
+  private tasks: TaskModel[] = [];
+
+  getAllTasks(): TaskModel[] {
     return this.tasks;
   }
 
-  getTasksWithFilters(filterDto: GetTasksFilterDto): Task[] {
+  getTasksWithFilters(filterDto: GetTasksFilterDto): TaskModel[] {
     const { status, search } = filterDto;
 
     let tasks = this.getAllTasks();
@@ -25,7 +32,7 @@ export class TasksService {
 
     if (search) {
       tasks = tasks.filter(
-        (task: Task) =>
+        (task: TaskModel) =>
           task.title.includes(search) || task.description.includes(search),
       );
     }
@@ -33,9 +40,9 @@ export class TasksService {
     return tasks;
   }
 
-  createTask(createTaskDto: CreateTaskDto): Task {
+  createTask(createTaskDto: CreateTaskDto): TaskModel {
     const { title, description } = createTaskDto;
-    const task: Task = {
+    const task: TaskModel = {
       id: uuidv4(),
       title: title,
       description: description,
@@ -47,7 +54,7 @@ export class TasksService {
     return task;
   }
 
-  getTaskById(id: string): Task {
+  getTaskById(id: string): TaskModel {
     const task = this.tasks.find((task) => task.id === id);
     if (!task) {
       throw new NotFoundException(`Task with ID: ${id} not found`);
@@ -62,7 +69,10 @@ export class TasksService {
     return this.tasks;
   }
 
-  updateStatus(id: string, updateTaskStatusDto: UpdateTaskStatusDto): Task {
+  updateStatus(
+    id: string,
+    updateTaskStatusDto: UpdateTaskStatusDto,
+  ): TaskModel {
     const { status } = updateTaskStatusDto;
     const task = this.getTaskById(id);
     task.status = status;
